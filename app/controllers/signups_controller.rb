@@ -2,7 +2,6 @@ class SignupsController < ApplicationController
   def create
     user_id = params[:user_id].to_s
     password = params[:password].to_s
-
     if user_id.empty? || password.empty?
       render json: { message: "Account creation failed", cause: "Required user_id and password" }, status: :bad_request and return
     end

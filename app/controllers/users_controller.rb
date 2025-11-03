@@ -1,6 +1,7 @@
 class UsersController < ApplicationController
   def show
     require_basic_auth!
+    return if performed?
     user = User.find_by(user_id: params[:user_id])
     unless user
       render json: { message: "No user found" }, status: :not_found and return
@@ -14,6 +15,7 @@ class UsersController < ApplicationController
 
   def update
     require_basic_auth!(expected_user_id: params[:user_id])
+    return if performed?
     user = current_user
 
     if params.key?(:user_id) || params.key?(:password)
