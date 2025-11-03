@@ -40,14 +40,13 @@ plugin :solid_queue if ENV["SOLID_QUEUE_IN_PUMA"]
 # In other environments, only set the PID file if requested.
 pidfile ENV["PIDFILE"] if ENV["PIDFILE"]
 
-# Run pending migrations automatically when Puma boots up.
-# This runs once before workers are forked.
+# Ensure the app is preloaded for faster worker boot
 preload_app!
 
-before_fork do
+# In single-mode, before_fork does not run. Use on_booted to run once at boot.
+on_booted do
   begin
     require "active_record"
-    # Ensure a connection exists to inspect migration status
     ActiveRecord::Base.establish_connection
     migration_context = if ActiveRecord::Base.connection.respond_to?(:migration_context)
       ActiveRecord::Base.connection.migration_context
@@ -56,9 +55,13 @@ before_fork do
     end
 
     if migration_context.needs_migration?
-      system("bin/rails db:migrate")
+      $stdout.puts "[puma] Pending migrations detected. Running migrations..."
+      migration_context.migrate
+      $stdout.puts "[puma] Migrations complete."
+    else
+      $stdout.puts "[puma] No pending migrations."
     end
   rescue => e
-    STDERR.puts "[puma] Migration check failed: #{e.class}: #{e.message}"
+    $stderr.puts "[puma] Migration check failed: #{e.class}: #{e.message}"
   end
 end
